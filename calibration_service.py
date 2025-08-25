@@ -3,7 +3,7 @@ import json
 import time
 import logging
 from typing import Dict, Any, List, Optional, Union, cast
-from label_inference import Model
+from yolo_inference import Model
 from models.box import CustomEncoder
 
 # Configure logging
