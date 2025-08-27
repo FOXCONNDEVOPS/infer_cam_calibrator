@@ -118,7 +118,7 @@ class Model:
             imgsz=input_size,
             iou=config.get_inference_thresholds()[1], 
             conf=config.get_inference_thresholds()[0],
-            max_det=700,
+            max_det=572,
         )
         
         box_results = self.postprocess_predictions(results, orig_dimensions, input_size, distance, cam)
