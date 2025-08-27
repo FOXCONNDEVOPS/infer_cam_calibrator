@@ -113,8 +113,13 @@ class Model:
         img, cam, distance, orig_dimensions = self.load_image(image_path, (input_size[1], input_size[0]))
         
         # Run inference with YOLO
-        results = model.predict(img, imgsz=input_size, iou=config.get_inference_thresholds()[1], 
-                                conf=config.get_inference_thresholds()[0])
+        results = model.predict(
+            img,
+            imgsz=input_size,
+            iou=config.get_inference_thresholds()[1], 
+            conf=config.get_inference_thresholds()[0],
+            max_det=700,
+        )
         
         box_results = self.postprocess_predictions(results, orig_dimensions, input_size, distance, cam)
         self.plot_predictions(box_results, image_path)
