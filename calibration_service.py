@@ -9,7 +9,7 @@ from models.box import CustomEncoder
 # Configure logging
 logging.basicConfig(
     filename="/opt/kiosk_fw/logs/camera_calibration_inference.log",
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("CalibrationService")
@@ -71,8 +71,8 @@ class CalibrationService:
         
         if msg.topic == MQTT_TOPIC_CMD:
             try:
-                m = Model()
-                results = m.run(logger)
+                m = Model(logger)
+                results = m.run()
                 serialized_results = []
                 for img_boxes in results:
                     serialized_img_boxes = []
@@ -91,7 +91,7 @@ class CalibrationService:
                     json.dumps({"error": f"Model import failed: {str(e)}"})
                 )
             except Exception as e:
-                logger.error(f"Error running model: {e}")
+                logger.exception(f"Error running model: {e}")
                 self.client.publish(
                     MQTT_TOPIC_RESPONSE, 
                     json.dumps({"error": f"Model execution failed: {str(e)}"})

@@ -16,8 +16,11 @@ CAMS = config.get_cameras()
 
 class Model:
 
-    def run(self, logger: logging.Logger) -> List[List[Box]]:
-        logger.info(f"####### Starting inference #######")
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+
+    def run(self) -> List[List[Box]]:
+        self.logger.info(f"####### Starting inference #######")
         model_path = config.get_model_path()
         session = onnxruntime.InferenceSession(model_path)
         imgs: List[List[Box]] = []
@@ -25,10 +28,10 @@ class Model:
         for img_path in os.listdir(imgs_dir):
             if not self.is_jpg(img_path):
                 continue
-            logger.info(f"Inference in image {img_path}")
+            self.logger.info(f"Inference in image {img_path}")
             full_path = os.path.join(imgs_dir, img_path)
             imgs.append(self.run_inference(session, full_path))
-        logger.info(f"###### Calibration complete ######")
+        self.logger.info(f"###### Calibration complete ######")
         
         return imgs
 
@@ -61,17 +64,12 @@ class Model:
         input_dimensions: Tuple[int, int],
         distance: int,
         cam: str,
-        conf_threshold: Optional[float] = None,
-        iou_threshold: Optional[float] = None,
     ) -> List[Box]:
         """Process raw model outputs to get bounding boxes, confidence scores, and class IDs"""
 
-        # Use configured thresholds if not provided
-        if conf_threshold is None or iou_threshold is None:
-            conf_default, iou_default = config.get_inference_thresholds()
-            conf_threshold = conf_threshold if conf_threshold is not None else conf_default
-            iou_threshold = iou_threshold if iou_threshold is not None else iou_default
+        conf_threshold, iou_threshold = config.get_inference_thresholds()
         outputs = outputs[0]
+        self.logger.debug(f"bbox shape: {outputs.shape}")
         bbox = outputs[:, :4, :]       # (1, 4, 35301)
         cls_probs = outputs[:, 4:, :]   # (1, 14, 35301)
         bbox = np.transpose(bbox, (0, 2, 1))       # (1, 35301, 4)
@@ -85,15 +83,12 @@ class Model:
 
         # Apply Non-Maximum Suppression
         results = []
-        processed_boxes = []
-        for box in boxes:
-            x_center, y_center, width, height = box
-            x1 = x_center - width / 2
-            y1 = y_center - height / 2
-            x2 = x_center + width / 2
-            y2 = y_center + height / 2
-            processed_boxes.append([x1, y1, x2, y2])
-        processed_boxes = np.array(processed_boxes)
+        x_center, y_center, width, height = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+        x1 = x_center - width / 2
+        y1 = y_center - height / 2
+        x2 = x_center + width / 2
+        y2 = y_center + height / 2
+        processed_boxes = np.column_stack([x_center, y_center, width, height])
         unique_labels = np.unique(labels)
         for class_id in unique_labels:
             class_indices = np.where(labels == class_id)[0]
@@ -106,20 +101,16 @@ class Model:
                     score_threshold=conf_threshold,
                     nms_threshold=iou_threshold
                 )
+                orig_height, orig_width = orig_dimensions
                 if isinstance(keep_indices, np.ndarray):
                     keep_indices = keep_indices.flatten().tolist()
                 for idx in keep_indices:
                     actual_idx = class_indices[idx]
-                    x1, y1, x2, y2 = processed_boxes[actual_idx]
-                    x1 = x1/input_dimensions[0]
-                    y1 = y1/input_dimensions[1]
-                    x2 = x2/input_dimensions[0]
-                    y2 = y2/input_dimensions[1]
-                    orig_height, orig_width = orig_dimensions
-                    x1 = int(x1 * orig_width)
-                    y1 = int(y1 * orig_height)
-                    x2 = int(x2 * orig_width)
-                    y2 = int(y2 * orig_height)
+                    x_center, y_center, width, height = processed_boxes[actual_idx]
+                    x1 = int(((x_center - width / 2) * orig_width) /input_dimensions[0])
+                    y1 = int(((y_center - height / 2) * orig_height) /input_dimensions[1])
+                    x2 = int(((x_center + width / 2) * orig_width) /input_dimensions[0])
+                    y2 = int(((y_center + height / 2) * orig_height) /input_dimensions[1])
                     results.append(
                         Box(
                             coord = Coord (
