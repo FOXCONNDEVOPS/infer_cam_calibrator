@@ -17,21 +17,27 @@ VENV_DIR="$APP_DIR/.venv"
 LOG_DIR="/opt/kiosk_fw/logs"
 SERVICE_NAME="calibration-service"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
+PYTHON_VERSION="3.12.3"
+PYENV_ROOT="/root/.pyenv"
+
 
 # Create log directory if it doesn't exist
 echo "Creating log directory..."
 mkdir -p $LOG_DIR
 chmod 755 $LOG_DIR
 
-# Create and activate virtual environment
+
+
+# Create virtual environment using pyenv's Python
 echo "Setting up Python virtual environment..."
-python3.12 -m venv $VENV_DIR
-source $VENV_DIR/bin/activate
+pyenv local $PYTHON_VERSION
+PYENV_PYTHON="$PYENV_ROOT/versions/$PYTHON_VERSION/bin/python"
+$PYENV_PYTHON -m venv $VENV_DIR
 
 # Install requirements
 echo "Installing Python dependencies..."
-pip install --upgrade pip
-pip install -r $APP_DIR/requirements.txt
+$VENV_DIR/bin/pip install --upgrade pip
+$VENV_DIR/bin/pip install -r $APP_DIR/requirements.txt
 
 # Create systemd service file
 echo "Creating systemd service..."
@@ -48,7 +54,8 @@ Restart=always
 RestartSec=10
 User=root
 Group=root
-Environment=PATH=$VENV_DIR/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=$VENV_DIR/bin:$PYENV_ROOT/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYENV_ROOT=$PYENV_ROOT
 StandardOutput=append:$LOG_DIR/calibration-service-output.log
 StandardError=append:$LOG_DIR/calibration-service-error.log
 
@@ -63,5 +70,6 @@ systemctl enable $SERVICE_NAME
 systemctl start $SERVICE_NAME
 
 echo "Installation complete! Camera calibration service has been installed and started."
+echo "Python version: $($VENV_DIR/bin/python --version)"
 echo "Service status: $(systemctl is-active $SERVICE_NAME)"
-echo "Check logs at $LOG_DIR/camera_calibration_inference.log"
+echo "Check logs at $LOG_DIR/calibration-service-output.log and $LOG_DIR/calibration-service-error.log"
