@@ -18,7 +18,7 @@ LOG_DIR="/opt/kiosk_fw/logs"
 SERVICE_NAME="calibration-service"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 PYTHON_VERSION="3.12.3"
-PYENV_ROOT="/root/.pyenv"
+PYENV_USER="$HOME/.pyenv"
 
 
 # Create log directory if it doesn't exist
@@ -30,8 +30,9 @@ chmod 755 $LOG_DIR
 
 # Create virtual environment using pyenv's Python
 echo "Setting up Python virtual environment..."
+cd $APP_DIR
 pyenv local $PYTHON_VERSION
-PYENV_PYTHON="$PYENV_ROOT/versions/$PYTHON_VERSION/bin/python"
+PYENV_PYTHON="$PYENV_USER/versions/$PYTHON_VERSION/bin/python"
 $PYENV_PYTHON -m venv $VENV_DIR
 
 # Install requirements
@@ -54,8 +55,8 @@ Restart=always
 RestartSec=10
 User=root
 Group=root
-Environment=PATH=$VENV_DIR/bin:$PYENV_ROOT/bin:/usr/local/bin:/usr/bin:/bin
-Environment=PYENV_ROOT=$PYENV_ROOT
+Environment=PATH=$VENV_DIR/bin:$PYENV_USER/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYENV_ROOT=$PYENV_USER
 StandardOutput=append:$LOG_DIR/calibration-service-output.log
 StandardError=append:$LOG_DIR/calibration-service-error.log
 
