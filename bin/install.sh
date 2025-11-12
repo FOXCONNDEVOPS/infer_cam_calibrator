@@ -18,7 +18,7 @@ LOG_DIR="/opt/kiosk_fw/logs"
 SERVICE_NAME="calibration-service"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 PYTHON_VERSION="3.12.3"
-PYENV_USER="$HOME/.pyenv"
+PYENV_ROOT="$HOME/.pyenv"
 
 
 # Create log directory if it doesn't exist
@@ -26,13 +26,27 @@ echo "Creating log directory..."
 mkdir -p $LOG_DIR
 chmod 755 $LOG_DIR
 
+if [ ! -d "$PYENV_ROOT" ]; then
+    echo "Installing pyenv..."
+    curl https://pyenv.run | bash
+fi
+export PYENV_ROOT="$PYENV_ROOT"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
 
+echo "Installing Python $PYTHON_VERSION with pyenv..."
+if ! pyenv versions --bare | grep -q "^${PYTHON_VERSION}$"; then
+    pyenv install $PYTHON_VERSION
+else
+    echo "Python $PYTHON_VERSION already installed"
+fi
+echo "Setting local Python version for $APP_DIR..."
+cd $APP_DIR
+pyenv local $PYTHON_VERSION
 
 # Create virtual environment using pyenv's Python
 echo "Setting up Python virtual environment..."
-cd $APP_DIR
-pyenv local $PYTHON_VERSION
-PYENV_PYTHON="$PYENV_USER/versions/$PYTHON_VERSION/bin/python"
+PYENV_PYTHON="$PYENV_ROOT/versions/$PYTHON_VERSION/bin/python"
 $PYENV_PYTHON -m venv $VENV_DIR
 
 # Install requirements
@@ -55,8 +69,8 @@ Restart=always
 RestartSec=10
 User=root
 Group=root
-Environment=PATH=$VENV_DIR/bin:$PYENV_USER/bin:/usr/local/bin:/usr/bin:/bin
-Environment=PYENV_ROOT=$PYENV_USER
+Environment=PATH=$VENV_DIR/bin:$PYENV_ROOT/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYENV_ROOT=$PYENV_ROOT
 StandardOutput=append:$LOG_DIR/calibration-service-output.log
 StandardError=append:$LOG_DIR/calibration-service-error.log
 
