@@ -1,3 +1,4 @@
 *.pyc
 labels/*
 .venv
+.tools/
