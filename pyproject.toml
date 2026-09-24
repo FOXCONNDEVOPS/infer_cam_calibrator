@@ -36,6 +36,7 @@ module-name = "infer_cam_calibrator"
 
 [tool.uv]
 # uv is pinned. bin/install.sh bootstraps this exact release, verified by checksum:
+# (bin/install.sh reads the version and the sha256 line below; keep their format.)
 #   https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-unknown-linux-gnu.tar.gz
 #   sha256 89eadd7c76fc063887959510d5ba0ab1264dfd5f1143b925ddb73021a40acf16
 required-version = "==0.12.18"
