@@ -3,12 +3,12 @@ import logging
 import cv2
 import numpy as np
 from typing import List, Tuple, Dict, Any, Optional, Union, cast
-from models.box import Box
-from models.coord import Coord
+from infer_cam_calibrator.models.box import Box
+from infer_cam_calibrator.models.coord import Coord
 import matplotlib.pyplot as plt
 import random
 import os
-import config
+from infer_cam_calibrator import config
 from ultralytics import YOLO
 
 # Load configuration values

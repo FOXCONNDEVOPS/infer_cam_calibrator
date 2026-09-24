@@ -3,12 +3,12 @@ import onnxruntime
 import cv2
 import numpy as np
 from typing import List, Tuple, Dict, Any, Optional, Union, cast
-from models.box import Box
-from models.coord import Coord
+from infer_cam_calibrator.models.box import Box
+from infer_cam_calibrator.models.coord import Coord
 import matplotlib.pyplot as plt
 import random
 import os
-import config
+from infer_cam_calibrator import config
 
 # Load configuration values
 CLASS_NAMES = config.get_class_names()

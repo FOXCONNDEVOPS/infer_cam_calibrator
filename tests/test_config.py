@@ -1,8 +1,9 @@
 from pathlib import Path
 
-import config
+from infer_cam_calibrator import config
 
-SHIPPED_CONF = Path(__file__).resolve().parents[1] / "cam_calib.conf"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SHIPPED_CONF = REPO_ROOT / "cam_calib.conf"
 
 
 def test_shipped_config_has_expected_keys():
@@ -19,7 +20,14 @@ def test_shipped_config_has_expected_keys():
         "random_seed",
         "save_path",
     }
-    assert cfg["model_path"].endswith(".onnx")
     assert cfg["cameras"] == {"rgb": 0, "nir": 1}
     assert cfg["class_names"][13] == "nucleus"
     assert cfg["input_size"] == (2592, 2592)
+
+
+def test_shipped_config_model_path_points_at_weights():
+    cfg = config.load_config(str(SHIPPED_CONF))
+    model_path = Path(cfg["model_path"])
+
+    assert model_path == Path("/opt/infer_cam_calibrator/weights") / model_path.name
+    assert (REPO_ROOT / "weights" / model_path.name).is_file()
