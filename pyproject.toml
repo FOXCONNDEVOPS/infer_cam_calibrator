@@ -42,9 +42,6 @@ required-version = "==0.12.18"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Temporary: the service modules are still flat at the repo root.
-# Remove once they live in src/infer_cam_calibrator/.
-pythonpath = ["."]
 
 [dependency-groups]
 dev = [

@@ -2,7 +2,7 @@ import numpy as np
 from typing import Any
 import json
 from dataclasses import dataclass
-from models.coord import Coord
+from infer_cam_calibrator.models.coord import Coord
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, obj):

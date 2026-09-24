@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import config
+from infer_cam_calibrator import config
 
 SHIPPED_CONF = Path(__file__).resolve().parents[1] / "cam_calib.conf"
 

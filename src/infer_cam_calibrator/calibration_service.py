@@ -3,15 +3,9 @@ import json
 import time
 import logging
 from typing import Dict, Any, List, Optional, Union, cast
-from inference import Model
-from models.box import CustomEncoder
+from infer_cam_calibrator.inference import Model
+from infer_cam_calibrator.models.box import CustomEncoder
 
-# Configure logging
-logging.basicConfig(
-    filename="/opt/kiosk_fw/logs/camera_calibration_inference.log",
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger("CalibrationService")
 
 # MQTT settings
@@ -99,6 +93,12 @@ class CalibrationService:
                 
 
 if __name__ == "__main__":
+    # Configured here, not at import time, so importing this module has no side effects
+    logging.basicConfig(
+        filename="/opt/kiosk_fw/logs/camera_calibration_inference.log",
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     service = CalibrationService()
     service.start()
     
