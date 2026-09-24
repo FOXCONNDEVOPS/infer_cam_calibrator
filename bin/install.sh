@@ -2,6 +2,8 @@
 # Installation script for the camera calibration service on Ubuntu.
 # Called by kiosk_fw as `sudo bin/install.sh` (no arguments) on a fresh clone at
 # /opt/infer_cam_calibrator. This interface is stable: do not add required arguments.
+# Every kiosk_fw version depends on it; read "Stable interface used by kiosk_fw" in
+# README.md before changing anything here.
 #
 # Bootstraps the uv release pinned in pyproject.toml ([tool.uv]) into .tools/uv,
 # verified by sha256, syncs .venv from uv.lock, and installs the systemd service.
