@@ -8,12 +8,18 @@ from infer_cam_calibrator.models.coord import Coord
 import matplotlib.pyplot as plt
 import random
 import os
+import functools
 from infer_cam_calibrator import config
 from ultralytics import YOLO
 
-# Load configuration values
-CLASS_NAMES = config.get_class_names()
-CAMS = config.get_cameras()
+# Configuration values, loaded lazily on first use (not at import time) and cached
+@functools.lru_cache(maxsize=None)
+def _class_names() -> Dict[int, str]:
+    return config.get_class_names()
+
+@functools.lru_cache(maxsize=None)
+def _cams() -> Dict[str, int]:
+    return config.get_cameras()
 
 class Model:
 
@@ -96,9 +102,9 @@ class Model:
                     distance = distance,
                     confidence = float(box.conf.item()),
                     class_id = int(box.cls.item()),
-                    class_name = CLASS_NAMES[int(box.cls.item())],
+                    class_name = _class_names()[int(box.cls.item())],
                     original_size = (orig_width, orig_height),
-                    cam_idx = CAMS[cam],
+                    cam_idx = _cams()[cam],
                 )
             )
             
@@ -143,7 +149,7 @@ class Model:
             input_size = config.get_input_size()
         if save_path is None:
             save_path = config.load_config().get("save_path")
-        num_classes = len(CLASS_NAMES)
+        num_classes = len(_class_names())
         color_map: Dict[int, Tuple[int, int, int]] = {}
         random_seed = config.load_config().get("random_seed", 42)
         random.seed(random_seed)  # For reproducible colors

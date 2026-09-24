@@ -6,11 +6,17 @@ import random
 from typing import List, Tuple, Dict, Any, Optional, Union, cast
 from infer_cam_calibrator.models.box import Box
 from infer_cam_calibrator.models.coord import Coord
+import functools
 from infer_cam_calibrator import config
 
-# Load configuration values
-CLASS_NAMES = config.get_class_names()
-CAMS = config.get_cameras()
+# Configuration values, loaded lazily on first use (not at import time) and cached
+@functools.lru_cache(maxsize=None)
+def _class_names() -> Dict[int, str]:
+    return config.get_class_names()
+
+@functools.lru_cache(maxsize=None)
+def _cams() -> Dict[str, int]:
+    return config.get_cameras()
 
 class Model:
     
@@ -85,7 +91,7 @@ class Model:
                 y2 = int((y_center + height/2) * orig_height)
                 
                 # Use class_id directly from label, map to class name
-                class_name = CLASS_NAMES.get(class_id, f"unknown_{class_id}")
+                class_name = _class_names().get(class_id, f"unknown_{class_id}")
                 
                 results.append(
                     Box(
@@ -100,7 +106,7 @@ class Model:
                         class_id = class_id,
                         class_name = class_name,
                         original_size = (orig_width, orig_height),
-                        cam_idx = CAMS[cam],
+                        cam_idx = _cams()[cam],
                     )
                 )
                 
@@ -124,7 +130,7 @@ class Model:
             input_size = config.get_input_size()
         if save_path is None:
             save_path = config.load_config().get("save_path")
-        num_classes = len(CLASS_NAMES)
+        num_classes = len(_class_names())
         color_map: Dict[int, Tuple[int, int, int]] = {}
         random_seed = config.load_config().get("random_seed", 42)
         random.seed(random_seed)  # For reproducible colors
