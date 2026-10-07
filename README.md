@@ -44,7 +44,7 @@ The project is a uv-managed package with a src layout. Service code is imported 
   - [label_inference.py](scripts/label_inference.py) — alternative label-file based pipeline for working from YOLO-style `.txt` labels instead of model inference
   - [yolo_inference.py](scripts/yolo_inference.py) — alternative runtime using `ultralytics.YOLO`
   - [export.py](scripts/export.py) — helper script to export a YOLO `.pt` model to ONNX
-- [weights/](weights/) — the ONNX model (`cam_calibrator_1_1_9.onnx`)
+- [weights/](weights/) — the ONNX model (`cam_calibrator_1_2_1.onnx`)
 - [cam_calib.conf](cam_calib.conf) — model path, image path, classes, thresholds, camera mapping, visualization path
 - [tests/](tests/) — pytest tests (imports, import style, config, `bin/install.sh` invariants)
 - [bin/install.sh](bin/install.sh) — kiosk installer: bootstraps uv, syncs `.venv` and installs the systemd service
