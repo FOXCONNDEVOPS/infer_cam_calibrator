@@ -169,3 +169,31 @@ def test_corners_are_python_ints(shipped_config):
 
 def test_no_detections_above_threshold(shipped_config):
     assert _decode(_raw_output([(500.0, 500.0, 40.0, 40.0)], [0], [0.1])) == []
+
+
+# --------------------------------------------------------------------------- NMS
+
+
+def test_nms_uses_top_left_boxes(shipped_config):
+    """cv2.dnn.NMSBoxes takes (x, y, w, h) with (x, y) the top-left corner.
+
+    A = (50, 50)-(150, 150) and B = (50, 50)-(100, 150) overlap with IoU 0.5 > 0.25,
+    so B is suppressed. Read as top-left boxes, their centres would give an IoU of
+    0.2 and keep both.
+    """
+    a = (100.0 + 324, 100.0, 100.0, 100.0)
+    b = (75.0 + 324, 100.0, 50.0, 100.0)
+
+    boxes = _decode(_raw_output([a, b], [0, 0], [0.9, 0.8]))
+
+    assert len(boxes) == 1
+    assert boxes[0].coord.tl == (50, 50)
+    assert boxes[0].coord.br == (150, 150)
+
+
+def test_nms_is_per_class(shipped_config):
+    box = (100.0 + 324, 100.0, 100.0, 100.0)
+
+    boxes = _decode(_raw_output([box, box], [0, 1], [0.9, 0.8]))
+
+    assert sorted(b.class_id for b in boxes) == [0, 1]

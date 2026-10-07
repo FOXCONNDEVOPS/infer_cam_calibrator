@@ -150,11 +150,13 @@ class Model:
         x2 = x_center + width / 2
         y2 = y_center + height / 2
         processed_boxes = np.column_stack([x_center, y_center, width, height])
+        # cv2.dnn.NMSBoxes takes (x, y, w, h) with (x, y) the top-left corner
+        nms_boxes = np.column_stack([x1, y1, width, height])
         unique_labels = np.unique(labels)
         for class_id in unique_labels:
             class_indices = np.where(labels == class_id)[0]
             if len(class_indices) > 0:
-                class_boxes = processed_boxes[class_indices]
+                class_boxes = nms_boxes[class_indices]
                 class_scores = scores[class_indices]
                 keep_indices = cv2.dnn.NMSBoxes(
                     class_boxes.tolist(),
