@@ -20,6 +20,61 @@ def _class_names() -> Dict[int, str]:
 def _cams() -> Dict[str, int]:
     return config.get_cameras()
 
+# Letterbox, as Ultralytics 8.3.x (the version the models are trained with) does it in
+# ultralytics.data.augment.LetterBox (predict defaults: auto=False, scaleup=True,
+# center=True, padding value 114) and undoes it in ultralytics.utils.ops.scale_boxes.
+# The model is trained and validated on letterboxed images, so it must see the same
+# geometry here: a stretched resize changes the aspect ratio of every marker.
+LETTERBOX_PAD_VALUE = 114
+
+
+def letterbox_params(
+    orig_shape: Tuple[int, int], new_shape: Tuple[int, int]
+) -> Tuple[float, Tuple[int, int], Tuple[int, int, int, int]]:
+    """Scale and padding of a letterbox from orig_shape to new_shape, both (height, width).
+
+    Returns (ratio, (new_unpad_w, new_unpad_h), (top, bottom, left, right)),
+    with the same rounding as Ultralytics' LetterBox.
+    """
+    h, w = orig_shape
+    r = min(new_shape[0] / h, new_shape[1] / w)
+    new_unpad = int(round(w * r)), int(round(h * r))
+    dw = (new_shape[1] - new_unpad[0]) / 2
+    dh = (new_shape[0] - new_unpad[1]) / 2
+    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+    return r, new_unpad, (top, bottom, left, right)
+
+
+def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> np.ndarray:
+    """Resize img keeping its aspect ratio and pad it, centred, to new_shape (height, width)."""
+    _, new_unpad, (top, bottom, left, right) = letterbox_params(img.shape[:2], new_shape)
+    if img.shape[1::-1] != new_unpad:
+        img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
+    pad = (LETTERBOX_PAD_VALUE,) * 3
+    return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=pad)
+
+
+def unletterbox_boxes(
+    xyxy: np.ndarray, orig_shape: Tuple[int, int], new_shape: Tuple[int, int]
+) -> np.ndarray:
+    """Map xyxy boxes from the letterboxed new_shape back to orig_shape (both (height, width)).
+
+    Removes the padding, divides by the scale and clips to the image, like Ultralytics'
+    scale_boxes. Returns float coordinates.
+    """
+    r, _, (top, _, left, _) = letterbox_params(orig_shape, new_shape)
+    out = np.asarray(xyxy, dtype=np.float64).copy()
+    out[:, [0, 2]] = ((out[:, [0, 2]] - left) / r).clip(0, orig_shape[1])
+    out[:, [1, 3]] = ((out[:, [1, 3]] - top) / r).clip(0, orig_shape[0])
+    return out
+
+
+def to_pixel(v: float) -> int:
+    """Nearest integer pixel. kiosk_fw's Box parser accepts only int coordinates."""
+    return int(round(float(v)))
+
+
 class Model:
 
     def __init__(self, logger: logging.Logger):
@@ -47,7 +102,7 @@ class Model:
 
 
     def load_image(self, image_path: str, input_size: Tuple[int, int]) -> Tuple[np.ndarray, str, int, Tuple[int, int]]:
-        """Load and preprocess image for inference"""
+        """Load and letterbox an image for inference. input_size is (height, width)."""
         img = cv2.imread(str(image_path))
         image_name = image_path.split("/")[-1]
         cam = image_name[:3]
@@ -55,7 +110,7 @@ class Model:
         if img is None:
             raise FileNotFoundError(f"Image not found at {image_path}")
         orig_height, orig_width = img.shape[:2]
-        img = cv2.resize(img, (input_size[1], input_size[0]))
+        img = letterbox(img, input_size)
         img = img.astype(np.float32) / 255.0
         img = img[:, :, ::-1]
         img = img.transpose(2, 0, 1)
@@ -110,13 +165,18 @@ class Model:
                 orig_height, orig_width = orig_dimensions
                 if isinstance(keep_indices, np.ndarray):
                     keep_indices = keep_indices.flatten().tolist()
-                for idx in keep_indices:
-                    actual_idx = class_indices[idx]
-                    x_center, y_center, width, height = processed_boxes[actual_idx]
-                    x1 = int(((x_center - width / 2) * orig_width) /input_dimensions[0])
-                    y1 = int(((y_center - height / 2) * orig_height) /input_dimensions[1])
-                    x2 = int(((x_center + width / 2) * orig_width) /input_dimensions[0])
-                    y2 = int(((y_center + height / 2) * orig_height) /input_dimensions[1])
+                # input_dimensions is (width, height), as in cam_calib.conf
+                kept = class_indices[np.asarray(keep_indices, dtype=int)]
+                xc, yc, w, h = processed_boxes[kept].T
+                xyxy = unletterbox_boxes(
+                    np.column_stack([xc - w / 2, yc - h / 2, xc + w / 2, yc + h / 2]),
+                    (orig_height, orig_width),
+                    (input_dimensions[1], input_dimensions[0]),
+                )
+                for actual_idx, (fx1, fy1, fx2, fy2) in zip(kept, xyxy):
+                    # Rounded, not truncated: int() biased every corner up to 1 px
+                    # towards the top-left.
+                    x1, y1, x2, y2 = to_pixel(fx1), to_pixel(fy1), to_pixel(fx2), to_pixel(fy2)
                     results.append(
                         Box(
                             coord = Coord (
